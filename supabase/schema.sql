@@ -22,7 +22,12 @@ create table if not exists obras (
   cliente_id uuid references clientes(id) on delete cascade
 );
 
-create type parte_estado as enum ('pendiente', 'revisado');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'parte_estado') then
+    create type parte_estado as enum ('pendiente', 'revisado');
+  end if;
+end $$;
 
 create table if not exists partes (
   id uuid primary key default gen_random_uuid(),
@@ -69,6 +74,28 @@ alter table obras enable row level security;
 alter table partes enable row level security;
 alter table fotosparte enable row level security;
 alter table avisos enable row level security;
+
+drop policy if exists "Allow authenticated users to read own profile" on users;
+drop policy if exists "Allow administrador read all profiles" on users;
+drop policy if exists "Allow authenticated insert own profile" on users;
+drop policy if exists "Allow users update own profile except rol" on users;
+drop policy if exists "Allow authenticated read clientes" on clientes;
+drop policy if exists "Allow administrador manage clientes" on clientes;
+drop policy if exists "Allow authenticated read obras" on obras;
+drop policy if exists "Allow administrador manage obras" on obras;
+drop policy if exists "Allow trabajadores access to own partes" on partes;
+drop policy if exists "Allow trabajadores insert partes" on partes;
+drop policy if exists "Allow trabajadores update own partes if pending" on partes;
+drop policy if exists "Allow administrador manage all partes" on partes;
+drop policy if exists "Allow authenticated read fotosparte" on fotosparte;
+drop policy if exists "Allow insert fotosparte if part belongs to user" on fotosparte;
+drop policy if exists "Allow delete fotosparte if part belongs to user" on fotosparte;
+drop policy if exists "Allow trabajador read own avisos" on avisos;
+drop policy if exists "Allow trabajador resolve own avisos" on avisos;
+drop policy if exists "Allow administrador manage avisos" on avisos;
+drop policy if exists "Allow authenticated read partes bucket objects" on storage.objects;
+drop policy if exists "Allow authenticated uploads to partes bucket" on storage.objects;
+drop policy if exists "Allow authenticated update to partes bucket" on storage.objects;
 
 create policy "Allow authenticated users to read own profile" on users
   for select using (auth.uid() = id);

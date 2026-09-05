@@ -14,9 +14,9 @@ export function MainShell({ children, profile, horasSemana = 0, updateAvatarActi
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <Navbar profile={profile ?? null} updateAvatarAction={updateAvatarAction} avisosPendientes={avisosPendientes} />
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[18rem_1fr] lg:px-6">
+      <div className="mx-auto grid max-w-7xl gap-4 px-3 py-4 sm:gap-6 sm:px-6 lg:grid-cols-[18rem_1fr] lg:px-6 lg:py-8">
         <Sidebar horasSemana={horasSemana} isAdmin={profile?.rol === 'administrador'} />
-        <main className="space-y-6">{children}</main>
+        <main className="space-y-6 min-w-0">{children}</main>
       </div>
     </div>
   );

@@ -75,8 +75,25 @@ export function ParteForm({ clientes, obras, defaultValues, action, submitLabel 
     }
   }, [defaultValues, setValue]);
 
-  const handlePointerDown = () => setDrawing(true);
-  const handlePointerUp = () => setDrawing(false);
+  const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !canvasContext) return;
+    event.preventDefault();
+    canvas.setPointerCapture?.(event.pointerId);
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    canvasContext.beginPath();
+    canvasContext.moveTo(x, y);
+    setDrawing(true);
+  };
+
+  const handlePointerUp = (event?: React.PointerEvent<HTMLCanvasElement>) => {
+    if (event && event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setDrawing(false);
+  };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (!drawing || !canvasContext || !canvasRef.current) return;
@@ -244,10 +261,11 @@ export function ParteForm({ clientes, obras, defaultValues, action, submitLabel 
             ref={canvasRef}
             width={720}
             height={240}
-            className={cn('w-full rounded-2xl border border-slate-300 bg-white', signatureUrl ? 'ring-2 ring-brand-500' : '')}
+            className={cn('w-full touch-none rounded-2xl border border-slate-300 bg-white', signatureUrl ? 'ring-2 ring-brand-500' : '')}
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
+            onPointerCancel={handlePointerUp}
             onPointerMove={handlePointerMove}
           />
         </div>

@@ -8,7 +8,12 @@ export async function signInWithEmail(email: string, password: string) {
 }
 
 export async function signUpUser(email: string, password: string, nombre: string, rol: UserRole) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/signin` : undefined;
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: redirectTo ? { emailRedirectTo: redirectTo } : undefined,
+  });
   if (error) throw error;
 
   if (!data.user) {

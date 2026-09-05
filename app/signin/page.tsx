@@ -38,6 +38,11 @@ export default function SignInPage() {
     setLoading(false);
 
     if (signInError) {
+      const message = signInError.message.toLowerCase();
+      if (message.includes('not confirmed') || message.includes('confirm')) {
+        setError('La cuenta aún no está verificada. Revisa tu correo y confirma el enlace de activación.');
+        return;
+      }
       setError(signInError.message);
       return;
     }

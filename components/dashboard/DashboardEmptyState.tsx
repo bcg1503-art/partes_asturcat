@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { ArrowUpRight, BarChart3, ClipboardList, Users } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { ChartCard } from '@/components/charts/ChartCard';
@@ -50,27 +51,37 @@ export function DashboardEmptyState({
         </ChartCard>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: 'Partes', value: String(partesCount), icon: ClipboardList },
-          { label: 'Clientes', value: String(clientesCount), icon: Users },
-          { label: 'Tareas', value: '0', icon: BarChart3 },
-          { label: 'Avance', value: `${avancePct}%`, icon: ArrowUpRight }
+          { label: 'Partes', value: String(partesCount), icon: ClipboardList, href: '/dashboard/partes' },
+          { label: 'Clientes', value: String(clientesCount), icon: Users, href: '/dashboard/clientes' },
+          { label: 'Tareas', value: '0', icon: BarChart3, href: '/dashboard/horas-por-trabajador' },
+          { label: 'Avance', value: `${avancePct}%`, icon: ArrowUpRight, href: null }
         ].map((item) => {
           const Icon = item.icon;
-          return (
-            <Card key={item.label} className="rounded-[1.75rem] border-slate-200 bg-white/95 p-6 shadow-soft dark:border-slate-800 dark:bg-slate-900/90">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">{item.label}</p>
-                  <p className="mt-4 text-3xl font-semibold text-slate-950 dark:text-slate-100">{item.value}</p>
+          const cardContent = (
+            <Card className="rounded-[1.5rem] border-slate-200 bg-white/95 p-4 shadow-soft transition hover:shadow-md dark:border-slate-800 dark:bg-slate-900/90 sm:p-5 xl:p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400 sm:text-xs">{item.label}</p>
+                  <p className="mt-3 text-2xl font-semibold text-slate-950 dark:text-slate-100 sm:text-3xl">{item.value}</p>
                 </div>
-                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  <Icon className="h-5 w-5" />
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 sm:h-12 sm:w-12">
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
               </div>
             </Card>
           );
+
+          if (item.href) {
+            return (
+              <Link key={item.label} href={item.href} className="block">
+                {cardContent}
+              </Link>
+            );
+          }
+
+          return <div key={item.label}>{cardContent}</div>;
         })}
       </div>
 

@@ -36,6 +36,10 @@ select {
   font: inherit;
 }
 
+html, body {
+  overscroll-behavior: none;
+}
+
 img,
 video {
   max-width: 100%;
