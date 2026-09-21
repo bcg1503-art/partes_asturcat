@@ -29,19 +29,33 @@ begin
   end if;
 end $$;
 
+-- Sequence for auto-incrementing parte numbers (00001, 00002, etc.)
+create sequence if not exists numero_parte_seq start 1 increment 1;
+
 create table if not exists partes (
   id uuid primary key default gen_random_uuid(),
+  numero_parte integer not null unique default nextval('numero_parte_seq'),
   trabajador_id uuid not null references users(id) on delete cascade,
   cliente_id uuid not null references clientes(id) on delete restrict,
-  obra_id uuid not null references obras(id) on delete restrict,
   fecha date not null,
   horas numeric not null,
-  descripcion text not null,
-  materiales text,
+  mes integer not null check (mes >= 1 and mes <= 12),
+  ano integer not null,
   observaciones text,
-  firma_url text,
   estado parte_estado not null default 'pendiente',
-  created_at timestamp with time zone not null default now()
+  created_at timestamp with time zone not null default now(),
+  unique(trabajador_id, cliente_id, mes, ano)
+);
+
+-- Reference table to prevent duplicate parte creation for same trabajador+cliente+mes+ano
+create table if not exists parte_ref_trabajador_cliente_mes (
+  id uuid primary key default gen_random_uuid(),
+  trabajador_id uuid not null references users(id) on delete cascade,
+  cliente_id uuid not null references clientes(id) on delete cascade,
+  mes integer not null check (mes >= 1 and mes <= 12),
+  ano integer not null,
+  numero_parte integer not null,
+  unique(trabajador_id, cliente_id, mes, ano)
 );
 
 create table if not exists fotosparte (
@@ -186,6 +200,31 @@ create policy "Allow trabajadores update own partes if pending" on partes
   );
 
 create policy "Allow administrador manage all partes" on partes
+  for all using (
+    exists (
+      select 1 from users where users.id = auth.uid() and users.rol = 'administrador'
+    )
+  );
+
+-- RLS for parte_ref_trabajador_cliente_mes
+alter table parte_ref_trabajador_cliente_mes enable row level security;
+
+drop policy if exists "Allow trabajador access own parte ref" on parte_ref_trabajador_cliente_mes;
+drop policy if exists "Allow administrador manage parte ref" on parte_ref_trabajador_cliente_mes;
+
+create policy "Allow trabajador access own parte ref" on parte_ref_trabajador_cliente_mes
+  for select using (
+    auth.uid() = trabajador_id or exists (
+      select 1 from users where users.id = auth.uid() and users.rol = 'administrador'
+    )
+  );
+
+create policy "Allow trabajador insert own parte ref" on parte_ref_trabajador_cliente_mes
+  for insert with check (
+    auth.uid() = trabajador_id
+  );
+
+create policy "Allow administrador manage parte ref" on parte_ref_trabajador_cliente_mes
   for all using (
     exists (
       select 1 from users where users.id = auth.uid() and users.rol = 'administrador'

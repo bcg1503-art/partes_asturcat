@@ -6,7 +6,7 @@ import { getCurrentUserProfile } from '@/actions/auth';
 import { createParteConAdjuntos } from '@/actions/partes';
 
 interface NewPartePageProps {
-  searchParams: Promise<{ cliente_id?: string; obra_id?: string }>;
+  searchParams: Promise<{ cliente_id?: string }>;
 }
 
 export default async function NewPartePage({ searchParams }: NewPartePageProps) {
@@ -15,14 +15,13 @@ export default async function NewPartePage({ searchParams }: NewPartePageProps) 
     redirect('/signin');
   }
 
-  const { cliente_id: preselectedClienteId, obra_id: preselectedObraId } = await searchParams;
+  const { cliente_id: preselectedClienteId } = await searchParams;
 
   const supabase = await supabaseServer();
   const { data: clientes, error: clientesError } = await supabase.from('clientes').select('*').order('nombre');
-  const { data: obras, error: obrasError } = await supabase.from('obras').select('*').order('nombre');
 
-  if (clientesError || obrasError) {
-    throw clientesError ?? obrasError;
+  if (clientesError) {
+    throw clientesError;
   }
 
   async function createParteAction(formData: FormData) {
@@ -53,8 +52,7 @@ export default async function NewPartePage({ searchParams }: NewPartePageProps) 
       </div>
       <ParteForm
         clientes={clientes ?? []}
-        obras={obras ?? []}
-        defaultValues={{ cliente_id: preselectedClienteId, obra_id: preselectedObraId }}
+        defaultValues={{ cliente_id: preselectedClienteId }}
         action={createParteAction}
         submitLabel="Guardar parte"
       />

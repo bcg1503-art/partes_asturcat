@@ -23,7 +23,7 @@ export default async function PartesPage({ searchParams }: PartesPageProps) {
   const supabase = await supabaseServer();
   const query = supabase
     .from('partes')
-    .select('*, users(id,nombre,avatar_url), clientes(id,nombre), obras(id,nombre)', { count: 'exact' })
+    .select('*, users(id,nombre,avatar_url), clientes(id,nombre)', { count: 'exact' })
     .order('fecha', { ascending: false })
     .range(from, to);
 

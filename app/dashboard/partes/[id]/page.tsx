@@ -2,9 +2,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabase-server';
 import { getCurrentUserProfile } from '@/actions/auth';
+import { formatNumeroPartee } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
-import type { FotosParte } from '@/types';
 
 async function markParteRevisadoAction(parteId: string) {
   'use server';
@@ -43,11 +43,9 @@ export default async function ParteDetailPage({ params }: ParteDetailPageProps) 
   const supabase = await supabaseServer();
   const { data: parte, error } = await supabase
     .from('partes')
-    .select('*, users(id,nombre,avatar_url), clientes(id,nombre), obras(id,nombre)')
+    .select('*, users(id,nombre,avatar_url), clientes(id,nombre)')
     .eq('id', id)
     .single();
-
-  const { data: fotos } = await supabase.from('fotosparte').select('*').eq('parte_id', id);
 
   if (error || !parte) {
     notFound();
@@ -67,7 +65,7 @@ export default async function ParteDetailPage({ params }: ParteDetailPageProps) 
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Detalle del parte</p>
-            <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-100">Parte {parte.id}</h1>
+            <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-100">Parte <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-lg font-semibold text-blue-700 dark:bg-blue-900 dark:text-blue-200">{formatNumeroPartee(parte.numero_parte)}</span></h1>
           </div>
           <div className="flex flex-wrap gap-3">
             {profile.rol === 'administrador' ? (
@@ -94,8 +92,8 @@ export default async function ParteDetailPage({ params }: ParteDetailPageProps) 
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-950">
+        <div className="space-y-4 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-950">
+          <div className="grid gap-6 lg:grid-cols-2">
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Trabajador</p>
               <div className="mt-2 flex items-center gap-3">
@@ -107,10 +105,8 @@ export default async function ParteDetailPage({ params }: ParteDetailPageProps) 
               <p className="text-sm text-slate-500 dark:text-slate-400">Cliente</p>
               <p className="mt-2 text-base font-medium text-slate-900 dark:text-slate-100">{parte.clientes?.nombre}</p>
             </div>
-            <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Obra</p>
-              <p className="mt-2 text-base font-medium text-slate-900 dark:text-slate-100">{parte.obras?.nombre}</p>
-            </div>
+          </div>
+          <div className="grid gap-6 lg:grid-cols-2">
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Fecha</p>
               <p className="mt-2 text-base font-medium text-slate-900 dark:text-slate-100">{new Date(parte.fecha).toLocaleDateString('es-ES')}</p>
@@ -119,44 +115,24 @@ export default async function ParteDetailPage({ params }: ParteDetailPageProps) 
               <p className="text-sm text-slate-500 dark:text-slate-400">Horas</p>
               <p className="mt-2 text-base font-medium text-slate-900 dark:text-slate-100">{parte.horas}</p>
             </div>
+          </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Mes / Año</p>
+              <p className="mt-2 text-base font-medium text-slate-900 dark:text-slate-100">{parte.mes}/{parte.ano}</p>
+            </div>
             <div className="flex items-center gap-2">
               <p className="text-sm text-slate-500 dark:text-slate-400">Estado</p>
               <Badge variant={parte.estado === 'pendiente' ? 'warning' : 'success'}>{parte.estado}</Badge>
             </div>
           </div>
-          <div className="space-y-4 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-6 dark:border-slate-800 dark:bg-slate-950">
-            <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Descripción</p>
-              <p className="mt-2 text-base text-slate-700 dark:text-slate-200">{parte.descripcion}</p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Materiales</p>
-              <p className="mt-2 text-base text-slate-700 dark:text-slate-200">{parte.materiales || 'Sin materiales especificados'}</p>
-            </div>
+          {parte.observaciones && (
             <div>
               <p className="text-sm text-slate-500 dark:text-slate-400">Observaciones</p>
-              <p className="mt-2 text-base text-slate-700 dark:text-slate-200">{parte.observaciones || 'Sin observaciones'}</p>
+              <p className="mt-2 text-base text-slate-700 dark:text-slate-200">{parte.observaciones}</p>
             </div>
-          </div>
+          )}
         </div>
-
-        {parte.firma_url ? (
-          <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-            <p className="text-sm text-slate-500 dark:text-slate-400">Firma</p>
-            <img src={parte.firma_url} alt="Firma del trabajador" className="mt-4 w-full rounded-2xl border border-slate-300" />
-          </div>
-        ) : null}
-
-        {fotos && fotos.length > 0 ? (
-          <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-            <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">Fotografías adjuntas</p>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {(fotos ?? []).map((foto: FotosParte) => (
-                <img key={foto.id} src={foto.foto_url} alt={`Foto del parte ${foto.id}`} className="h-40 w-full rounded-2xl object-cover" />
-              ))}
-            </div>
-          </div>
-        ) : null}
     </section>
   );
 }

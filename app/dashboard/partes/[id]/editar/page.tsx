@@ -4,6 +4,7 @@ import { ParteForm } from '@/components/partes/parte-form';
 import { supabaseServer } from '@/lib/supabase-server';
 import { getCurrentUserProfile } from '@/actions/auth';
 import { updateParteConAdjuntos } from '@/actions/partes';
+import { formatNumeroPartee } from '@/lib/utils';
 
 interface EditPartePageProps {
   params: Promise<{ id: string }>;
@@ -36,10 +37,9 @@ export default async function EditPartePage({ params }: EditPartePageProps) {
   }
 
   const { data: clientes, error: clientesError } = await supabase.from('clientes').select('*').order('nombre');
-  const { data: obras, error: obrasError } = await supabase.from('obras').select('*').order('nombre');
 
-  if (clientesError || obrasError) {
-    throw clientesError ?? obrasError;
+  if (clientesError) {
+    throw clientesError;
   }
 
   async function updateParteAction(formData: FormData) {
@@ -62,11 +62,8 @@ export default async function EditPartePage({ params }: EditPartePageProps) {
   const defaultValues = {
     fecha: parte.fecha,
     cliente_id: parte.cliente_id,
-    obra_id: parte.obra_id,
     horas: String(parte.horas),
-    descripcion: parte.descripcion,
-    materiales: parte.materiales,
-    observaciones: parte.observaciones
+    observaciones: parte.observaciones ?? ''
   };
 
   return (
@@ -85,7 +82,7 @@ export default async function EditPartePage({ params }: EditPartePageProps) {
       </div>
       <ParteForm
         clientes={clientes}
-        obras={obras}
+        numeroPartee={formatNumeroPartee(parte.numero_parte)}
         defaultValues={defaultValues}
         action={updateParteAction}
         submitLabel="Actualizar parte"

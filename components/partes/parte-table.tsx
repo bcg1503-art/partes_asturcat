@@ -3,13 +3,14 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { Parte } from '@/types';
+import { formatNumeroPartee } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 
 interface ParteTableProps {
   partes: Array<
-    Parte & { users?: { nombre: string; avatar_url?: string | null }; clientes?: { nombre: string }; obras?: { nombre: string } }
+    Parte & { users?: { nombre: string; avatar_url?: string | null }; clientes?: { nombre: string } }
   >;
   isAdmin: boolean;
 }
@@ -24,9 +25,8 @@ export function ParteTable({ partes, isAdmin }: ParteTableProps) {
       .filter((parte) => {
         const search = searchText.toLowerCase();
         const matchesSearch =
-          parte.descripcion.toLowerCase().includes(search) ||
+          formatNumeroPartee(parte.numero_parte).toLowerCase().includes(search) ||
           parte.clientes?.nombre.toLowerCase().includes(search) ||
-          parte.obras?.nombre.toLowerCase().includes(search) ||
           (isAdmin ? parte.users?.nombre.toLowerCase().includes(search) : false);
         const matchesStatus = statusFilter ? parte.estado === statusFilter : true;
         return matchesSearch && matchesStatus;
@@ -50,7 +50,7 @@ export function ParteTable({ partes, isAdmin }: ParteTableProps) {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <input
             className="h-12 rounded-2xl border border-slate-300 bg-slate-50 px-4 text-sm text-slate-900 outline-none transition duration-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-brand-400 dark:focus:ring-brand-900/20"
-            placeholder="Buscar descripción, cliente u obra"
+            placeholder="Buscar número de parte o cliente"
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
           />
@@ -79,9 +79,9 @@ export function ParteTable({ partes, isAdmin }: ParteTableProps) {
             <thead className="bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
               <tr>
                 <th className="px-4 py-3">Fecha</th>
+                <th className="px-4 py-3">Parte #</th>
                 {isAdmin ? <th className="px-4 py-3">Trabajador</th> : null}
                 <th className="px-4 py-3">Cliente</th>
-                <th className="px-4 py-3">Obra</th>
                 <th className="px-4 py-3">Horas</th>
                 <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3">Acción</th>
@@ -91,6 +91,11 @@ export function ParteTable({ partes, isAdmin }: ParteTableProps) {
               {filteredPartes.map((parte) => (
                 <tr key={parte.id} className="border-t border-slate-200 dark:border-slate-800">
                   <td className="px-4 py-4">{new Date(parte.fecha).toLocaleDateString('es-ES')}</td>
+                  <td className="px-4 py-4">
+                    <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-sm font-semibold text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+                      {formatNumeroPartee(parte.numero_parte)}
+                    </span>
+                  </td>
                   {isAdmin ? (
                     <td className="px-4 py-4">
                       {parte.users?.nombre ? (
@@ -104,7 +109,6 @@ export function ParteTable({ partes, isAdmin }: ParteTableProps) {
                     </td>
                   ) : null}
                   <td className="px-4 py-4">{parte.clientes?.nombre ?? 'N/A'}</td>
-                  <td className="px-4 py-4">{parte.obras?.nombre ?? 'N/A'}</td>
                   <td className="px-4 py-4">{parte.horas}</td>
                   <td className="px-4 py-4">
                     <Badge variant={statusVariant(parte.estado)}>{parte.estado}</Badge>

@@ -8,3 +8,10 @@ export function getInitials(nombre: string) {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
+
+/**
+ * Formats numero_parte as a 5-digit string: 00001, 00002, etc.
+ */
+export function formatNumeroPartee(numero: number): string {
+  return String(numero).padStart(5, '0');
+}

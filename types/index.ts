@@ -23,15 +23,14 @@ export type ParteEstado = 'pendiente' | 'revisado';
 
 export interface Parte {
   id: string;
+  numero_parte: number;
   trabajador_id: string;
   cliente_id: string;
-  obra_id: string;
   fecha: string;
   horas: number;
-  descripcion: string;
-  materiales: string;
-  observaciones: string;
-  firma_url?: string;
+  mes: number;
+  ano: number;
+  observaciones?: string;
   estado: ParteEstado;
   created_at: string;
 }
