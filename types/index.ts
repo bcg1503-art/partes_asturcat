@@ -21,24 +21,28 @@ export interface Obra {
 
 export type ParteEstado = 'pendiente' | 'revisado';
 
+/**
+ * Header for a trabajador+cliente+mes/ano combination. The actual work days
+ * are stored as RegistroParte rows linked via parte_id.
+ */
 export interface Parte {
   id: string;
   numero_parte: number;
   trabajador_id: string;
   cliente_id: string;
-  fecha: string;
-  horas: number;
   mes: number;
   ano: number;
-  observaciones?: string;
   estado: ParteEstado;
   created_at: string;
 }
 
-export interface FotosParte {
+export interface RegistroParte {
   id: string;
   parte_id: string;
-  foto_url: string;
+  fecha: string;
+  horas: number;
+  observaciones?: string | null;
+  created_at: string;
 }
 
 export interface Aviso {

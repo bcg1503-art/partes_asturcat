@@ -24,12 +24,14 @@ type ParteFormValues = z.infer<typeof parteSchema>;
 interface ParteFormProps {
   clientes: Cliente[];
   numeroPartee?: string; // Formatted as "00001"
+  /** When editing a single registro the cliente is fixed by the parent parte and can't change. */
+  clienteFijo?: { id: string; nombre: string };
   defaultValues?: Partial<ParteFormValues>;
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
 }
 
-export function ParteForm({ clientes, numeroPartee, defaultValues, action, submitLabel }: ParteFormProps) {
+export function ParteForm({ clientes, numeroPartee, clienteFijo, defaultValues, action, submitLabel }: ParteFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
@@ -40,7 +42,7 @@ export function ParteForm({ clientes, numeroPartee, defaultValues, action, submi
     formState: { errors }
   } = useForm<ParteFormValues>({
     resolver: zodResolver(parteSchema),
-    defaultValues
+    defaultValues: clienteFijo ? { ...defaultValues, cliente_id: clienteFijo.id } : defaultValues
   });
 
   const onSubmit = async (values: ParteFormValues) => {
@@ -56,13 +58,13 @@ export function ParteForm({ clientes, numeroPartee, defaultValues, action, submi
 
       await action(formData);
       setMessageType('success');
-      setMessage('Parte guardado correctamente.');
+      setMessage('Registro guardado correctamente.');
     } catch (error) {
       setMessageType('error');
       if (error instanceof Error) {
         setMessage(error.message);
       } else {
-        setMessage('Error guardando el parte.');
+        setMessage('Error guardando el registro.');
       }
     } finally {
       setIsSubmitting(false);
@@ -86,15 +88,26 @@ export function ParteForm({ clientes, numeroPartee, defaultValues, action, submi
         </div>
         <div className="space-y-2">
           <Label>Cliente</Label>
-          <Select {...register('cliente_id')}>
-            <option value="">Selecciona un cliente</option>
-            {clientes.map((cliente) => (
-              <option key={cliente.id} value={cliente.id}>
-                {cliente.nombre}
-              </option>
-            ))}
-          </Select>
-          {errors.cliente_id ? <p className="text-sm text-rose-600">{errors.cliente_id.message}</p> : null}
+          {clienteFijo ? (
+            <>
+              <input type="hidden" {...register('cliente_id')} value={clienteFijo.id} />
+              <p className="flex h-12 items-center rounded-2xl border border-slate-200 bg-slate-100 px-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                {clienteFijo.nombre}
+              </p>
+            </>
+          ) : (
+            <>
+              <Select {...register('cliente_id')}>
+                <option value="">Selecciona un cliente</option>
+                {clientes.map((cliente) => (
+                  <option key={cliente.id} value={cliente.id}>
+                    {cliente.nombre}
+                  </option>
+                ))}
+              </Select>
+              {errors.cliente_id ? <p className="text-sm text-rose-600">{errors.cliente_id.message}</p> : null}
+            </>
+          )}
         </div>
       </div>
 

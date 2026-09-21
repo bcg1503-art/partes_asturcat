@@ -39,6 +39,19 @@ export async function signUpUser(email: string, password: string, nombre: string
     throw new Error(body?.error || 'Error creating profile');
   }
 
+  if (data.session) {
+    const sessionResponse = await fetch('/api/auth/set-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session: data.session })
+    });
+
+    if (!sessionResponse.ok) {
+      const body = await sessionResponse.json();
+      throw new Error(body?.error || 'No se pudo guardar la sesión.');
+    }
+  }
+
   return data;
 }
 

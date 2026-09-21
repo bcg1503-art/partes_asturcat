@@ -19,8 +19,9 @@ export async function GET() {
     const { data: clientes } = await supabase.from('clientes').select('*').limit(10);
     const { data: obras } = await supabase.from('obras').select('*').limit(10);
     const { data: partes } = await supabase.from('partes').select('*').limit(10).order('id', { ascending: false });
+    const { data: registrosParte } = await supabase.from('registros_parte').select('*').limit(10).order('id', { ascending: false });
 
-    return NextResponse.json({ ok: true, users, clientes, obras, partes });
+    return NextResponse.json({ ok: true, users, clientes, obras, partes, registrosParte });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? 'Unknown error' }, { status: 500 });
   }

@@ -13,98 +13,148 @@ function extractMesAno(fecha: string): { mes: number; ano: number } {
 }
 
 /**
- * Gets or creates a parte number for a given trabajador+cliente+mes+ano combination.
- * Returns the numero_parte (integer).
- * 
- * If a parte already exists for this combination, returns its numero_parte.
- * If it does not exist, creates a new reference with a new numero_parte.
+ * Gets the parte header for a given trabajador+cliente+mes+ano combination,
+ * creating it (with a fresh numero_parte) if it doesn't exist yet.
+ *
+ * Uses `insert ... on conflict do nothing` against the
+ * unique(trabajador_id, cliente_id, mes, ano) constraint so this is safe even
+ * if two requests for the same combination race each other: only one insert
+ * wins, the other falls through to the select below.
  */
-async function getOrCreateParteNumber(
-  trabajadorId: string,
-  clienteId: string,
-  mes: number,
-  ano: number
-): Promise<number> {
+async function getOrCreateParte(trabajadorId: string, clienteId: string, mes: number, ano: number): Promise<Parte> {
   const supabase = await supabaseServer();
 
-  // Try to find existing reference
-  const { data: existingRef, error: refError } = await supabase
-    .from('parte_ref_trabajador_cliente_mes')
-    .select('numero_parte')
+  const { data: inserted, error: insertError } = await supabase
+    .from('partes')
+    .insert([{ trabajador_id: trabajadorId, cliente_id: clienteId, mes, ano }])
+    .select('*')
+    .maybeSingle();
+
+  if (insertError && insertError.code !== '23505') {
+    throw insertError;
+  }
+
+  if (inserted) {
+    return inserted;
+  }
+
+  const { data: existing, error: selectError } = await supabase
+    .from('partes')
+    .select('*')
     .eq('trabajador_id', trabajadorId)
     .eq('cliente_id', clienteId)
     .eq('mes', mes)
     .eq('ano', ano)
     .single();
 
-  if (!refError && existingRef) {
-    // Part already exists, return its numero_parte
-    return existingRef.numero_parte;
+  if (selectError || !existing) {
+    throw selectError ?? new Error('No se pudo crear ni recuperar el parte.');
   }
 
-  // Create new part with auto-incrementing numero_parte
-  const { data: newParte, error: parteError } = await supabase
-    .from('partes')
-    .insert([
-      {
-        trabajador_id: trabajadorId,
-        cliente_id: clienteId,
-        mes,
-        ano,
-        fecha: new Date().toISOString().split('T')[0], // Current date as placeholder
-        horas: 0,
-        estado: 'pendiente'
-      }
-    ])
-    .select('numero_parte')
-    .single();
-
-  if (parteError || !newParte) {
-    throw new Error(`Failed to create parte: ${parteError?.message ?? 'Unknown error'}`);
-  }
-
-  // Insert reference to prevent duplicates
-  const { error: refInsertError } = await supabase
-    .from('parte_ref_trabajador_cliente_mes')
-    .insert([
-      {
-        trabajador_id: trabajadorId,
-        cliente_id: clienteId,
-        mes,
-        ano,
-        numero_parte: newParte.numero_parte
-      }
-    ]);
-
-  if (refInsertError) {
-    // If reference insert fails, it might be a race condition (concurrent creation)
-    // Try fetching again
-    const { data: retryRef } = await supabase
-      .from('parte_ref_trabajador_cliente_mes')
-      .select('numero_parte')
-      .eq('trabajador_id', trabajadorId)
-      .eq('cliente_id', clienteId)
-      .eq('mes', mes)
-      .eq('ano', ano)
-      .single();
-
-    if (retryRef) {
-      return retryRef.numero_parte;
-    }
-    throw refInsertError;
-  }
-
-  return newParte.numero_parte;
+  return existing;
 }
 
-export async function updateParte(
-  id: string,
-  values: Partial<Omit<Parte, 'id' | 'trabajador_id' | 'numero_parte' | 'created_at'>>
-) {
+export function parseParteFormData(formData: FormData) {
+  return {
+    fecha: formData.get('fecha')?.toString() ?? '',
+    cliente_id: formData.get('cliente_id')?.toString() ?? '',
+    horas: Number(formData.get('horas')?.toString() ?? '0'),
+    observaciones: formData.get('observaciones')?.toString().trim() || null
+  };
+}
+
+/**
+ * Adds a work day (registro) for the trabajador. Finds or creates the parte
+ * header for the trabajador+cliente+mes/ano combination implied by `fecha`,
+ * then appends a new registro row to it — it never overwrites a previous
+ * registro for the same parte.
+ */
+export async function createRegistroParte(usuarioId: string, formData: FormData) {
+  const values = parseParteFormData(formData);
+  if (!values.fecha || !values.cliente_id) {
+    throw new Error('Fecha y cliente son obligatorios.');
+  }
+
+  const { mes, ano } = extractMesAno(values.fecha);
+  const parte = await getOrCreateParte(usuarioId, values.cliente_id, mes, ano);
+
   const supabase = await supabaseServer();
-  const { data, error } = await supabase.from('partes').update(values).eq('id', id).select('*').single();
+
+  if (parte.estado !== 'pendiente') {
+    // Adding a new day to a parte the admin had already reviewed reopens it,
+    // so the admin sees it needs a fresh look.
+    const { error: reopenError } = await supabase.from('partes').update({ estado: 'pendiente' }).eq('id', parte.id);
+    if (reopenError) throw reopenError;
+    parte.estado = 'pendiente';
+  }
+
+  const { data: registro, error } = await supabase
+    .from('registros_parte')
+    .insert([
+      {
+        parte_id: parte.id,
+        fecha: values.fecha,
+        horas: values.horas,
+        observaciones: values.observaciones
+      }
+    ])
+    .select('*')
+    .single();
+
   if (error) throw error;
-  return data;
+  return { parte, registro };
+}
+
+/**
+ * Updates a single registro (day entry). The registro must keep the same
+ * mes/ano as its parent parte — moving a date to a different month means it
+ * belongs to a different parte, which isn't supported as an edit.
+ */
+export async function updateRegistroParte(registroId: string, usuarioId: string, formData: FormData) {
+  const values = parseParteFormData(formData);
+  if (!values.fecha) {
+    throw new Error('La fecha es obligatoria.');
+  }
+
+  const supabase = await supabaseServer();
+  const { data: registro, error: fetchError } = await supabase
+    .from('registros_parte')
+    .select('*, partes!inner(id, trabajador_id, mes, ano, estado)')
+    .eq('id', registroId)
+    .single();
+
+  if (fetchError || !registro) {
+    throw new Error('Registro no encontrado.');
+  }
+
+  const parte = registro.partes as { id: string; trabajador_id: string; mes: number; ano: number; estado: string };
+
+  if (parte.trabajador_id !== usuarioId) {
+    throw new Error('No puedes editar este registro.');
+  }
+
+  const { mes, ano } = extractMesAno(values.fecha);
+  if (mes !== parte.mes || ano !== parte.ano) {
+    throw new Error('No puedes cambiar la fecha a un mes distinto del parte. Crea un nuevo registro para ese mes.');
+  }
+
+  if (parte.estado !== 'pendiente') {
+    // Editing a day on a parte the admin had already reviewed reopens it, so
+    // the admin sees it needs a fresh look.
+    const { error: reopenError } = await supabase.from('partes').update({ estado: 'pendiente' }).eq('id', parte.id);
+    if (reopenError) throw reopenError;
+  }
+
+  const { error: updateError } = await supabase
+    .from('registros_parte')
+    .update({
+      fecha: values.fecha,
+      horas: values.horas,
+      observaciones: values.observaciones
+    })
+    .eq('id', registroId);
+
+  if (updateError) throw updateError;
 }
 
 export async function markParteRevisado(id: string) {
@@ -114,110 +164,21 @@ export async function markParteRevisado(id: string) {
   return data;
 }
 
-export async function deleteParte(id: string) {
+/**
+ * Bulk-closes every pendiente parte for a given mes/ano (admin only, enforced
+ * both by the caller and by the "administrador manage all partes" RLS
+ * policy). Returns how many partes were closed.
+ */
+export async function cerrarMes(mes: number, ano: number) {
   const supabase = await supabaseServer();
-  const { error } = await supabase.from('partes').delete().eq('id', id);
-  if (error) throw error;
-}
-
-export function parseParteFormData(formData: FormData) {
-  return {
-    fecha: formData.get('fecha')?.toString() ?? '',
-    cliente_id: formData.get('cliente_id')?.toString() ?? '',
-    horas: Number(formData.get('horas')?.toString() ?? '0'),
-    observaciones: formData.get('observaciones')?.toString() ?? ''
-  };
-}
-
-export async function createParteConAdjuntos(usuarioId: string, formData: FormData) {
-  const values = parseParteFormData(formData);
-  const { mes, ano } = extractMesAno(values.fecha);
-
-  // Get or create parte number for this combination
-  const numeroPartee = await getOrCreateParteNumber(usuarioId, values.cliente_id, mes, ano);
-
-  // Insert or update the actual registro
-  const supabase = await supabaseServer();
-  const { data: existing } = await supabase
+  const { data, error } = await supabase
     .from('partes')
-    .select('id')
-    .eq('numero_parte', numeroPartee)
-    .eq('trabajador_id', usuarioId)
-    .single();
-
-  if (existing) {
-    // If this is the first entry for this parte, update it
-    const { data: parte, error } = await supabase
-      .from('partes')
-      .update({
-        fecha: values.fecha,
-        horas: values.horas,
-        observaciones: values.observaciones
-      })
-      .eq('id', existing.id)
-      .select('*')
-      .single();
-
-    if (error) throw error;
-    return parte;
-  }
-
-  const { data: parte, error } = await supabase
-    .from('partes')
-    .insert([
-      {
-        numero_parte: numeroPartee,
-        trabajador_id: usuarioId,
-        cliente_id: values.cliente_id,
-        fecha: values.fecha,
-        horas: values.horas,
-        mes,
-        ano,
-        observaciones: values.observaciones,
-        estado: 'pendiente'
-      }
-    ])
-    .select('*')
-    .single();
+    .update({ estado: 'revisado' })
+    .eq('mes', mes)
+    .eq('ano', ano)
+    .eq('estado', 'pendiente')
+    .select('id');
 
   if (error) throw error;
-  return parte;
-}
-
-export async function updateParteConAdjuntos(parteId: string, usuarioId: string, formData: FormData) {
-  const values = parseParteFormData(formData);
-
-  // Fetch current parte to verify it exists and belongs to user
-  const supabase = await supabaseServer();
-  const { data: currentParte, error: fetchError } = await supabase
-    .from('partes')
-    .select('numero_parte, trabajador_id, mes, ano')
-    .eq('id', parteId)
-    .single();
-
-  if (fetchError || !currentParte) {
-    throw new Error('Parte not found');
-  }
-
-  if (currentParte.trabajador_id !== usuarioId) {
-    throw new Error('Unauthorized');
-  }
-
-  // Verify fecha still has same mes+ano (cannot change part)
-  const { mes, ano } = extractMesAno(values.fecha);
-  if (mes !== currentParte.mes || ano !== currentParte.ano) {
-    throw new Error('Cannot change the month/year of a parte. Create a new parte for a different month.');
-  }
-
-  // Update only fecha, horas, observaciones (not numero_parte, fecha derivados)
-  const { error: updateError } = await supabase
-    .from('partes')
-    .update({
-      fecha: values.fecha,
-      horas: values.horas,
-      observaciones: values.observaciones
-    })
-    .eq('id', parteId);
-
-  if (updateError) throw updateError;
+  return data?.length ?? 0;
 }

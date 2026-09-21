@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { ParteForm } from '@/components/partes/parte-form';
 import { supabaseServer } from '@/lib/supabase-server';
 import { getCurrentUserProfile } from '@/actions/auth';
-import { createParteConAdjuntos } from '@/actions/partes';
+import { createRegistroParte } from '@/actions/partes';
 
 interface NewPartePageProps {
   searchParams: Promise<{ cliente_id?: string }>;
@@ -33,7 +33,7 @@ export default async function NewPartePage({ searchParams }: NewPartePageProps) 
       redirect('/signin');
     }
 
-    await createParteConAdjuntos(sessionData.session.user.id, formData);
+    await createRegistroParte(sessionData.session.user.id, formData);
   }
 
   return (

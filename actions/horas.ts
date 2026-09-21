@@ -10,28 +10,28 @@ export interface HistorialSemana {
 
 const WEEKS_TO_SHOW = 8;
 
-interface ParteConCliente {
+interface RegistroConParteYCliente {
   fecha: string;
   horas: number;
-  cliente_id: string;
-  clientes: { nombre: string } | null;
+  partes: { cliente_id: string; trabajador_id: string; clientes: { nombre: string } | null } | null;
 }
 
 export async function getHistorialSemanalTrabajador(trabajadorId: string): Promise<HistorialSemana[]> {
   const supabase = await supabaseServer();
   const { data, error } = await supabase
-    .from('partes')
-    .select('fecha, horas, cliente_id, clientes(nombre)')
-    .eq('trabajador_id', trabajadorId)
+    .from('registros_parte')
+    .select('fecha, horas, partes!inner(cliente_id, trabajador_id, clientes(nombre))')
+    .eq('partes.trabajador_id', trabajadorId)
     .order('fecha', { ascending: false });
   if (error) throw error;
 
   const weeks = new Map<string, HistorialSemana>();
 
-  for (const parte of (data ?? []) as unknown as ParteConCliente[]) {
-    const weekStartDate = getWeekStart(parte.fecha);
+  for (const registro of (data ?? []) as unknown as RegistroConParteYCliente[]) {
+    const clienteId = registro.partes?.cliente_id ?? '';
+    const clienteNombre = registro.partes?.clientes?.nombre ?? 'N/A';
+    const weekStartDate = getWeekStart(registro.fecha);
     const weekStart = toDateString(weekStartDate);
-    const clienteNombre = parte.clientes?.nombre ?? 'N/A';
 
     let week = weeks.get(weekStart);
     if (!week) {
@@ -39,12 +39,12 @@ export async function getHistorialSemanalTrabajador(trabajadorId: string): Promi
       weeks.set(weekStart, week);
     }
 
-    week.totalHoras += Number(parte.horas);
-    const clienteEntry = week.porCliente.find((c) => c.clienteId === parte.cliente_id);
+    week.totalHoras += Number(registro.horas);
+    const clienteEntry = week.porCliente.find((c) => c.clienteId === clienteId);
     if (clienteEntry) {
-      clienteEntry.horas += Number(parte.horas);
+      clienteEntry.horas += Number(registro.horas);
     } else {
-      week.porCliente.push({ clienteId: parte.cliente_id, clienteNombre, horas: Number(parte.horas) });
+      week.porCliente.push({ clienteId, clienteNombre, horas: Number(registro.horas) });
     }
   }
 
@@ -61,25 +61,29 @@ export interface TrabajadorHoras {
   porCliente: Array<{ clienteId: string; clienteNombre: string; horas: number }>;
 }
 
-interface ParteConClienteYTrabajador {
-  cliente_id: string;
-  trabajador_id: string;
+interface RegistroConParteClienteYTrabajador {
   horas: number;
-  clientes: { nombre: string } | null;
-  users: { id: string; nombre: string; avatar_url: string | null } | null;
+  partes: {
+    cliente_id: string;
+    trabajador_id: string;
+    clientes: { nombre: string } | null;
+    users: { id: string; nombre: string; avatar_url: string | null } | null;
+  } | null;
 }
 
 export async function getHorasPorTrabajadorYCliente(): Promise<TrabajadorHoras[]> {
   const supabase = await supabaseServer();
   const { data, error } = await supabase
-    .from('partes')
-    .select('cliente_id, trabajador_id, horas, clientes(nombre), users(id,nombre,avatar_url)')
-    .order('fecha', { ascending: false });
+    .from('registros_parte')
+    .select('horas, partes!inner(cliente_id, trabajador_id, clientes(nombre), users(id,nombre,avatar_url))');
   if (error) throw error;
 
   const trabajadores = new Map<string, TrabajadorHoras>();
 
-  for (const parte of (data ?? []) as unknown as ParteConClienteYTrabajador[]) {
+  for (const registro of (data ?? []) as unknown as RegistroConParteClienteYTrabajador[]) {
+    const parte = registro.partes;
+    if (!parte) continue;
+
     const clienteNombre = parte.clientes?.nombre ?? 'N/A';
     const trabajadorNombre = parte.users?.nombre ?? 'N/A';
     const trabajadorAvatarUrl = parte.users?.avatar_url ?? null;
@@ -90,12 +94,12 @@ export async function getHorasPorTrabajadorYCliente(): Promise<TrabajadorHoras[]
       trabajadores.set(parte.trabajador_id, trabajador);
     }
 
-    trabajador.totalHoras += Number(parte.horas);
+    trabajador.totalHoras += Number(registro.horas);
     const clienteEntry = trabajador.porCliente.find((c) => c.clienteId === parte.cliente_id);
     if (clienteEntry) {
-      clienteEntry.horas += Number(parte.horas);
+      clienteEntry.horas += Number(registro.horas);
     } else {
-      trabajador.porCliente.push({ clienteId: parte.cliente_id, clienteNombre, horas: Number(parte.horas) });
+      trabajador.porCliente.push({ clienteId: parte.cliente_id, clienteNombre, horas: Number(registro.horas) });
     }
   }
 

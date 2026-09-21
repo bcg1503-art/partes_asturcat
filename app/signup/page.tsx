@@ -30,9 +30,13 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      await signUpUser(email, password, nombre, 'trabajador');
-      setSuccess('Registro completado. Redirigiendo al dashboard...');
-      setTimeout(() => router.push('/dashboard'), 1200);
+      const data = await signUpUser(email, password, nombre, 'trabajador');
+      if (data.session) {
+        setSuccess('Registro completado. Redirigiendo al dashboard...');
+        setTimeout(() => router.push('/dashboard'), 1200);
+      } else {
+        setSuccess('Registro completado. Revisa tu correo y confirma tu cuenta antes de iniciar sesión.');
+      }
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);

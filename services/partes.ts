@@ -1,12 +1,12 @@
 import { supabase } from '@/lib/supabase-client';
-import type { Parte } from '@/types';
 
 export async function fetchPartesForTrabajador(trabajadorId: string) {
   const { data, error } = await supabase
     .from('partes')
-    .select('*')
+    .select('*, clientes(id,nombre), registros_parte(*)')
     .eq('trabajador_id', trabajadorId)
-    .order('fecha', { ascending: false });
+    .order('ano', { ascending: false })
+    .order('mes', { ascending: false });
 
   if (error) throw error;
   return data;
@@ -15,8 +15,9 @@ export async function fetchPartesForTrabajador(trabajadorId: string) {
 export async function fetchAllPartes() {
   const { data, error } = await supabase
     .from('partes')
-    .select('*')
-    .order('fecha', { ascending: false });
+    .select('*, users(id,nombre,avatar_url), clientes(id,nombre), registros_parte(*)')
+    .order('ano', { ascending: false })
+    .order('mes', { ascending: false });
 
   if (error) throw error;
   return data;
@@ -25,7 +26,7 @@ export async function fetchAllPartes() {
 export async function fetchParteById(parteId: string) {
   const { data, error } = await supabase
     .from('partes')
-    .select('*')
+    .select('*, users(id,nombre,avatar_url), clientes(id,nombre), registros_parte(*)')
     .eq('id', parteId)
     .single();
 

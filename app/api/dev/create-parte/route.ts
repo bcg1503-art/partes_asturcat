@@ -16,33 +16,43 @@ export async function GET() {
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const { data: user } = await supabase.from('users').select('id').limit(1).single();
-    // prefer default seeded clientes/obras if present
+    // prefer default seeded cliente if present
     const clienteId = '00000000-0000-0000-0000-000000000001';
-    const obraId = '10000000-0000-0000-0000-000000000001';
 
     if (!user) {
       return NextResponse.json({ error: 'Missing user' }, { status: 400 });
     }
 
-    const fecha = new Date().toISOString().split('T')[0];
-    const { data: parte, error } = await supabase
+    const now = new Date();
+    const fecha = now.toISOString().split('T')[0];
+    const mes = now.getUTCMonth() + 1;
+    const ano = now.getUTCFullYear();
+
+    const { data: parte, error: parteError } = await supabase
       .from('partes')
+      .upsert(
+        { trabajador_id: user.id, cliente_id: clienteId, mes, ano },
+        { onConflict: 'trabajador_id,cliente_id,mes,ano', ignoreDuplicates: false }
+      )
+      .select('*')
+      .single();
+
+    if (parteError) return NextResponse.json({ error: parteError.message }, { status: 500 });
+
+    const { data: registro, error: registroError } = await supabase
+      .from('registros_parte')
       .insert({
-        trabajador_id: user.id,
-        cliente_id: clienteId,
-        obra_id: obraId,
+        parte_id: parte.id,
         fecha,
         horas: 8,
-        descripcion: 'Parte de prueba creado por dev API',
-        materiales: 'Ninguno',
         observaciones: 'Creado en local'
       })
       .select('*')
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (registroError) return NextResponse.json({ error: registroError.message }, { status: 500 });
 
-    return NextResponse.json({ ok: true, parte });
+    return NextResponse.json({ ok: true, parte, registro });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? 'Unknown error' }, { status: 500 });
   }

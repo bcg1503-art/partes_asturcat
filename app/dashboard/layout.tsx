@@ -16,15 +16,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
     const weekStart = getWeekStart(new Date());
     const weekEnd = getWeekEnd(weekStart);
     const horasQuery = supabase
-      .from('partes')
-      .select('horas')
+      .from('registros_parte')
+      .select('horas, partes!inner(trabajador_id)')
       .gte('fecha', toDateString(weekStart))
       .lte('fecha', toDateString(weekEnd));
     if (profile.rol === 'trabajador') {
-      horasQuery.eq('trabajador_id', profile.id);
+      horasQuery.eq('partes.trabajador_id', profile.id);
     }
-    const { data: partesHoras } = await horasQuery;
-    horasSemana = (partesHoras ?? []).reduce((sum, parte) => sum + Number(parte.horas), 0);
+    const { data: registrosHoras } = await horasQuery;
+    horasSemana = (registrosHoras ?? []).reduce((sum, registro) => sum + Number(registro.horas), 0);
 
     if (profile.rol === 'trabajador') {
       avisosPendientes = await getAvisosPendientes(profile.id);

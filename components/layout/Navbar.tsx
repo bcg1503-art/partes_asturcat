@@ -268,7 +268,7 @@ export function Navbar({ profile, updateAvatarAction, avisosPendientes = [] }: N
                           </p>
                           {aviso.nota ? <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{aviso.nota}</p> : null}
                           <Link
-                            href={`/dashboard/partes/nuevo?cliente_id=${aviso.cliente_id}${aviso.obra_id ? `&obra_id=${aviso.obra_id}` : ''}`}
+                            href={`/dashboard/partes/nuevo?cliente_id=${aviso.cliente_id}`}
                             onClick={() => setNotifOpen(false)}
                             className="mt-2 inline-flex items-center text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-300"
                           >

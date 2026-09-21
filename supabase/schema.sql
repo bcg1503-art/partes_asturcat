@@ -32,37 +32,129 @@ end $$;
 -- Sequence for auto-incrementing parte numbers (00001, 00002, etc.)
 create sequence if not exists numero_parte_seq start 1 increment 1;
 
+-- `partes` is the monthly header for a trabajador+cliente+mes/ano combination.
+-- The individual work days live in `registros_parte` (see below). A single
+-- parte can contain many registros, one per date worked.
 create table if not exists partes (
   id uuid primary key default gen_random_uuid(),
   numero_parte integer not null unique default nextval('numero_parte_seq'),
   trabajador_id uuid not null references users(id) on delete cascade,
   cliente_id uuid not null references clientes(id) on delete restrict,
-  fecha date not null,
-  horas numeric not null,
   mes integer not null check (mes >= 1 and mes <= 12),
   ano integer not null,
-  observaciones text,
   estado parte_estado not null default 'pendiente',
   created_at timestamp with time zone not null default now(),
   unique(trabajador_id, cliente_id, mes, ano)
 );
 
--- Reference table to prevent duplicate parte creation for same trabajador+cliente+mes+ano
-create table if not exists parte_ref_trabajador_cliente_mes (
-  id uuid primary key default gen_random_uuid(),
-  trabajador_id uuid not null references users(id) on delete cascade,
-  cliente_id uuid not null references clientes(id) on delete cascade,
-  mes integer not null check (mes >= 1 and mes <= 12),
-  ano integer not null,
-  numero_parte integer not null,
-  unique(trabajador_id, cliente_id, mes, ano)
-);
-
-create table if not exists fotosparte (
+-- Migration: older databases had fecha/horas/observaciones directly on `partes`
+-- (one date per parte). Move that data into `registros_parte` before dropping
+-- the columns, so nothing is lost when this script is re-applied.
+create table if not exists registros_parte (
   id uuid primary key default gen_random_uuid(),
   parte_id uuid not null references partes(id) on delete cascade,
-  foto_url text not null
+  fecha date not null,
+  horas numeric not null check (horas >= 0),
+  observaciones text,
+  created_at timestamp with time zone not null default now()
 );
+
+do $$
+begin
+  if exists (select 1 from information_schema.columns where table_name = 'partes' and column_name = 'fecha') then
+    insert into registros_parte (parte_id, fecha, horas, observaciones, created_at)
+    select id, fecha, horas, observaciones, created_at from partes where fecha is not null;
+
+    alter table partes drop column fecha;
+    alter table partes drop column horas;
+    alter table partes drop column observaciones;
+  end if;
+end $$;
+
+-- Legacy fields from the old, more detailed parte form. No longer collected
+-- anywhere in the app; drop them if an older database still has them.
+alter table partes drop column if exists obra_id;
+alter table partes drop column if exists descripcion;
+alter table partes drop column if exists materiales;
+alter table partes drop column if exists firma_url;
+
+-- `create table if not exists partes` above is a no-op on a database that
+-- already had the table (which is the case for every environment this app has
+-- run in so far), so mes/ano being NOT NULL and the anti-duplicate unique
+-- constraint declared in that block never actually reached those databases.
+-- Backfill and enforce them explicitly here so this is safe to (re-)run
+-- regardless of how old the target database is.
+update partes p
+set
+  mes = coalesce(p.mes, extract(month from r.fecha)::int),
+  ano = coalesce(p.ano, extract(year from r.fecha)::int)
+from (
+  select distinct on (parte_id) parte_id, fecha
+  from registros_parte
+  order by parte_id, fecha
+) r
+where r.parte_id = p.id and (p.mes is null or p.ano is null);
+
+-- Merge any partes that ended up duplicated for the same
+-- trabajador+cliente+mes/ano (possible before the unique constraint below was
+-- enforced) into the one with the lowest numero_parte, moving its registros
+-- over first so no work is lost.
+do $$
+declare
+  dup record;
+  keep_id uuid;
+begin
+  for dup in
+    select trabajador_id, cliente_id, mes, ano
+    from partes
+    where mes is not null and ano is not null
+    group by trabajador_id, cliente_id, mes, ano
+    having count(*) > 1
+  loop
+    select id into keep_id from partes
+      where trabajador_id = dup.trabajador_id and cliente_id = dup.cliente_id
+        and mes = dup.mes and ano = dup.ano
+      order by numero_parte asc
+      limit 1;
+
+    update registros_parte set parte_id = keep_id
+      where parte_id in (
+        select id from partes
+        where trabajador_id = dup.trabajador_id and cliente_id = dup.cliente_id
+          and mes = dup.mes and ano = dup.ano and id <> keep_id
+      );
+
+    delete from partes
+      where trabajador_id = dup.trabajador_id and cliente_id = dup.cliente_id
+        and mes = dup.mes and ano = dup.ano and id <> keep_id;
+  end loop;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from partes where mes is null or ano is null) then
+    alter table partes alter column mes set not null;
+    alter table partes alter column ano set not null;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'partes_trabajador_id_cliente_id_mes_ano_key'
+  ) then
+    alter table partes
+      add constraint partes_trabajador_id_cliente_id_mes_ano_key
+      unique (trabajador_id, cliente_id, mes, ano);
+  end if;
+end $$;
+
+-- Superseded by the unique(trabajador_id, cliente_id, mes, ano) constraint on
+-- `partes` itself plus an atomic `insert ... on conflict do nothing` upsert.
+drop table if exists parte_ref_trabajador_cliente_mes;
+
+-- The foto/firma feature was removed; this table is no longer written to.
+drop table if exists fotosparte;
 
 -- Admin-created reminders asking a trabajador to log a parte for a given cliente
 -- (optionally scoped to a specific obra). Auto-resolved when a matching parte is created.
@@ -86,7 +178,7 @@ alter table users enable row level security;
 alter table clientes enable row level security;
 alter table obras enable row level security;
 alter table partes enable row level security;
-alter table fotosparte enable row level security;
+alter table registros_parte enable row level security;
 alter table avisos enable row level security;
 
 drop policy if exists "Allow authenticated users to read own profile" on users;
@@ -100,10 +192,14 @@ drop policy if exists "Allow administrador manage obras" on obras;
 drop policy if exists "Allow trabajadores access to own partes" on partes;
 drop policy if exists "Allow trabajadores insert partes" on partes;
 drop policy if exists "Allow trabajadores update own partes if pending" on partes;
+drop policy if exists "Allow trabajadores reopen own partes" on partes;
 drop policy if exists "Allow administrador manage all partes" on partes;
-drop policy if exists "Allow authenticated read fotosparte" on fotosparte;
-drop policy if exists "Allow insert fotosparte if part belongs to user" on fotosparte;
-drop policy if exists "Allow delete fotosparte if part belongs to user" on fotosparte;
+drop policy if exists "Allow trabajador read own registros" on registros_parte;
+drop policy if exists "Allow trabajador insert own registros if pending" on registros_parte;
+drop policy if exists "Allow trabajador update own registros if pending" on registros_parte;
+drop policy if exists "Allow trabajador insert own registros" on registros_parte;
+drop policy if exists "Allow trabajador update own registros" on registros_parte;
+drop policy if exists "Allow administrador manage all registros" on registros_parte;
 drop policy if exists "Allow trabajador read own avisos" on avisos;
 drop policy if exists "Allow trabajador resolve own avisos" on avisos;
 drop policy if exists "Allow administrador manage avisos" on avisos;
@@ -187,16 +283,21 @@ create policy "Allow trabajadores access to own partes" on partes
     )
   );
 
+-- Only insert is needed for trabajadores: the header (numero_parte, estado) is
+-- created once via `insert ... on conflict do nothing` and never edited by them
+-- afterwards; day-to-day edits happen on `registros_parte` instead.
 create policy "Allow trabajadores insert partes" on partes
   for insert with check (
     auth.uid() = trabajador_id
   );
 
-create policy "Allow trabajadores update own partes if pending" on partes
+-- Lets a trabajador reopen (estado back to 'pendiente') their own parte when
+-- they add or edit a registro after an administrador had marked it revisado.
+create policy "Allow trabajadores reopen own partes" on partes
   for update using (
-    auth.uid() = trabajador_id and estado = 'pendiente'
+    auth.uid() = trabajador_id
   ) with check (
-    auth.uid() = trabajador_id and estado = 'pendiente'
+    auth.uid() = trabajador_id
   );
 
 create policy "Allow administrador manage all partes" on partes
@@ -206,47 +307,44 @@ create policy "Allow administrador manage all partes" on partes
     )
   );
 
--- RLS for parte_ref_trabajador_cliente_mes
-alter table parte_ref_trabajador_cliente_mes enable row level security;
-
-drop policy if exists "Allow trabajador access own parte ref" on parte_ref_trabajador_cliente_mes;
-drop policy if exists "Allow administrador manage parte ref" on parte_ref_trabajador_cliente_mes;
-
-create policy "Allow trabajador access own parte ref" on parte_ref_trabajador_cliente_mes
+create policy "Allow trabajador read own registros" on registros_parte
   for select using (
-    auth.uid() = trabajador_id or exists (
-      select 1 from users where users.id = auth.uid() and users.rol = 'administrador'
-    )
-  );
-
-create policy "Allow trabajador insert own parte ref" on parte_ref_trabajador_cliente_mes
-  for insert with check (
-    auth.uid() = trabajador_id
-  );
-
-create policy "Allow administrador manage parte ref" on parte_ref_trabajador_cliente_mes
-  for all using (
     exists (
-      select 1 from users where users.id = auth.uid() and users.rol = 'administrador'
+      select 1 from partes
+      where partes.id = registros_parte.parte_id
+        and (partes.trabajador_id = auth.uid() or public.is_administrador())
     )
   );
 
-create policy "Allow authenticated read fotosparte" on fotosparte
-  for select using (auth.role() in ('authenticated'));
-
-create policy "Allow insert fotosparte if part belongs to user" on fotosparte
+-- Not gated on estado = 'pendiente': adding/editing a registro on a
+-- previously-revisado parte is allowed and reopens it (see actions/partes.ts),
+-- rather than being blocked outright.
+create policy "Allow trabajador insert own registros" on registros_parte
   for insert with check (
     exists (
-      select 1 from partes where partes.id = parte_id and partes.trabajador_id = auth.uid()
+      select 1 from partes
+      where partes.id = registros_parte.parte_id
+        and partes.trabajador_id = auth.uid()
     )
   );
 
-create policy "Allow delete fotosparte if part belongs to user" on fotosparte
-  for delete using (
+create policy "Allow trabajador update own registros" on registros_parte
+  for update using (
     exists (
-      select 1 from partes where partes.id = parte_id and partes.trabajador_id = auth.uid()
+      select 1 from partes
+      where partes.id = registros_parte.parte_id
+        and partes.trabajador_id = auth.uid()
+    )
+  ) with check (
+    exists (
+      select 1 from partes
+      where partes.id = registros_parte.parte_id
+        and partes.trabajador_id = auth.uid()
     )
   );
+
+create policy "Allow administrador manage all registros" on registros_parte
+  for all using (public.is_administrador());
 
 create policy "Allow trabajador read own avisos" on avisos
   for select using (trabajador_id = auth.uid());
@@ -259,7 +357,7 @@ create policy "Allow administrador manage avisos" on avisos
   for all using (public.is_administrador())
   with check (public.is_administrador());
 
--- Storage: the 'partes' bucket (firmas/ and fotos/ paths) is created via the Supabase
+-- Storage: the 'partes' bucket (avatars/ path) is created via the Supabase
 -- dashboard/Storage API, not by this script. It is public for reads, but uploads still
 -- go through RLS on storage.objects, so authenticated users need explicit policies.
 create policy "Allow authenticated read partes bucket objects" on storage.objects
