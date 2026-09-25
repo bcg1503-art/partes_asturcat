@@ -29,7 +29,7 @@ export async function getAvisosPendientes(trabajadorId: string) {
   const supabase = await supabaseServer();
   const { data, error } = await supabase
     .from('avisos')
-    .select('*, clientes(id,nombre), obras(id,nombre)')
+    .select('*, clientes(id,nombre)')
     .eq('trabajador_id', trabajadorId)
     .eq('resuelto', false)
     .order('created_at', { ascending: false });
@@ -41,7 +41,7 @@ export async function getAllAvisos() {
   const supabase = await supabaseServer();
   const { data, error } = await supabase
     .from('avisos')
-    .select('*, users!avisos_trabajador_id_fkey(id,nombre), clientes(id,nombre), obras(id,nombre)')
+    .select('*, users!avisos_trabajador_id_fkey(id,nombre), clientes(id,nombre)')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data;

@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getCurrentUserProfile, getTrabajadores } from '@/actions/auth';
 import { getClientes } from '@/actions/clientes';
-import { getObras } from '@/actions/obras';
 import { createAviso, getAllAvisos } from '@/actions/avisos';
 
 export default async function AvisosPage() {
@@ -20,7 +19,7 @@ export default async function AvisosPage() {
     redirect('/dashboard');
   }
 
-  const [trabajadores, clientes, obras, avisos] = await Promise.all([getTrabajadores(), getClientes(), getObras(), getAllAvisos()]);
+  const [trabajadores, clientes, avisos] = await Promise.all([getTrabajadores(), getClientes(), getAllAvisos()]);
 
   async function createAvisoAction(formData: FormData) {
     'use server';
@@ -32,7 +31,6 @@ export default async function AvisosPage() {
 
     const trabajadorId = formData.get('trabajador_id')?.toString();
     const clienteId = formData.get('cliente_id')?.toString();
-    const obraId = formData.get('obra_id')?.toString();
     const nota = formData.get('nota')?.toString().trim();
 
     if (!trabajadorId || !clienteId) {
@@ -42,7 +40,7 @@ export default async function AvisosPage() {
     await createAviso({
       trabajadorId,
       clienteId,
-      obraId: obraId || null,
+      obraId: null,
       nota: nota || undefined,
       creadoPor: currentProfile.id
     });
@@ -51,7 +49,7 @@ export default async function AvisosPage() {
 
   return (
     <TableShell title="Avisos" description="Pide a un trabajador que registre un parte para un cliente concreto.">
-      <form action={createAvisoAction} className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <form action={createAvisoAction} className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-2">
           <Label>Trabajador</Label>
           <Select name="trabajador_id" required defaultValue="">
@@ -78,23 +76,12 @@ export default async function AvisosPage() {
             ))}
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label>Obra (opcional)</Label>
-          <Select name="obra_id" defaultValue="">
-            <option value="">Cualquier obra</option>
-            {obras.map((obra) => (
-              <option key={obra.id} value={obra.id}>
-                {obra.nombre}
-              </option>
-            ))}
-          </Select>
-        </div>
         <div className="flex items-end">
           <Button type="submit" className="w-full">
             Crear aviso
           </Button>
         </div>
-        <div className="sm:col-span-2 lg:col-span-4">
+        <div className="sm:col-span-2 lg:col-span-3">
           <Label>Nota (opcional)</Label>
           <Textarea name="nota" placeholder="Ej. Revisa las horas extra de la semana pasada" className="mt-2 min-h-[80px]" />
         </div>
@@ -111,7 +98,6 @@ export default async function AvisosPage() {
               <tr>
                 <th className="px-4 py-3">Trabajador</th>
                 <th className="px-4 py-3">Cliente</th>
-                <th className="px-4 py-3">Obra</th>
                 <th className="px-4 py-3">Nota</th>
                 <th className="px-4 py-3">Estado</th>
               </tr>
@@ -121,7 +107,6 @@ export default async function AvisosPage() {
                 <tr key={aviso.id} className="border-t border-slate-200 dark:border-slate-800">
                   <td className="px-4 py-4">{aviso.users?.nombre ?? 'N/A'}</td>
                   <td className="px-4 py-4">{aviso.clientes?.nombre ?? 'N/A'}</td>
-                  <td className="px-4 py-4">{aviso.obras?.nombre ?? 'Cualquiera'}</td>
                   <td className="px-4 py-4">{aviso.nota || '—'}</td>
                   <td className="px-4 py-4">
                     <Badge variant={aviso.resuelto ? 'success' : 'warning'}>{aviso.resuelto ? 'resuelto' : 'pendiente'}</Badge>

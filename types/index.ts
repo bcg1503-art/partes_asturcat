@@ -13,12 +13,6 @@ export interface Cliente {
   nombre: string;
 }
 
-export interface Obra {
-  id: string;
-  nombre: string;
-  cliente_id: string;
-}
-
 export type ParteEstado = 'pendiente' | 'revisado';
 
 /**

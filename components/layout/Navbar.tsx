@@ -53,9 +53,7 @@ export interface AvisoConRelaciones {
   id: string;
   nota?: string | null;
   cliente_id: string;
-  obra_id?: string | null;
   clientes?: { nombre: string } | null;
-  obras?: { nombre: string } | null;
 }
 
 interface NavbarProps {
@@ -79,7 +77,6 @@ export function Navbar({ profile, updateAvatarAction, avisosPendientes = [] }: N
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/dashboard/partes', label: 'Partes' },
     { href: '/dashboard/clientes', label: 'Clientes' },
-    { href: '/dashboard/obras', label: 'Obras' },
     { href: '/dashboard/avisos', label: 'Avisos' },
     { href: '/dashboard/horas-por-trabajador', label: 'Horas' }
   ];
@@ -262,10 +259,7 @@ export function Navbar({ profile, updateAvatarAction, avisosPendientes = [] }: N
                     <div className="space-y-3">
                       {avisosPendientes.map((aviso) => (
                         <div key={aviso.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
-                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                            {aviso.clientes?.nombre ?? 'Cliente'}
-                            {aviso.obras?.nombre ? ` · ${aviso.obras.nombre}` : ''}
-                          </p>
+                          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{aviso.clientes?.nombre ?? 'Cliente'}</p>
                           {aviso.nota ? <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{aviso.nota}</p> : null}
                           <Link
                             href={`/dashboard/partes/nuevo?cliente_id=${aviso.cliente_id}`}

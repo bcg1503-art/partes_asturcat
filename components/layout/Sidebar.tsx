@@ -2,14 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Bell, Building2, FileText, LayoutDashboard, Plus, Users } from 'lucide-react';
+import { BarChart3, Bell, FileText, LayoutDashboard, Plus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
   { href: '/dashboard/partes', label: 'Partes', icon: FileText, adminOnly: false },
   { href: '/dashboard/clientes', label: 'Clientes', icon: Users, adminOnly: false },
-  { href: '/dashboard/obras', label: 'Obras', icon: Building2, adminOnly: false },
   { href: '/dashboard/avisos', label: 'Avisos', icon: Bell, adminOnly: true },
   { href: '/dashboard/horas-por-trabajador', label: 'Horas por trabajador', icon: BarChart3, adminOnly: true }
 ];
@@ -67,20 +66,12 @@ export function Sidebar({ horasSemana = 0, isAdmin = false }: SidebarProps) {
               <Plus className="h-4 w-4" /> Nuevo parte
             </Link>
             {isAdmin ? (
-              <>
-                <Link
-                  href="/dashboard/clientes"
-                  className="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
-                >
-                  <Plus className="h-4 w-4" /> Nuevo cliente
-                </Link>
-                <Link
-                  href="/dashboard/obras"
-                  className="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
-                >
-                  <Plus className="h-4 w-4" /> Nueva obra
-                </Link>
-              </>
+              <Link
+                href="/dashboard/clientes"
+                className="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
+              >
+                <Plus className="h-4 w-4" /> Nuevo cliente
+              </Link>
             ) : null}
           </div>
         </div>
