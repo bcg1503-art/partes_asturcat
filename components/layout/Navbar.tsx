@@ -1,22 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Camera, LogOut, Moon, SunMedium, Menu, MoreHorizontal } from 'lucide-react';
+import { Bell, Camera, LogOut, Moon, SunMedium, Menu, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { useTheme } from 'next-themes';
 import { useClientMounted } from '@/hooks/use-client-mounted';
 import { supabase } from '@/lib/supabase-client';
+import { navItems } from '@/components/layout/Sidebar';
+import { cn } from '@/lib/utils';
 import type { UserProfile } from '@/types';
-
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/dashboard/partes', label: 'Partes' },
-  { href: '/dashboard/clientes', label: 'Clientes' }
-];
 
 const AVATAR_SIZE = 256;
 
@@ -58,33 +54,24 @@ export interface AvisoConRelaciones {
 
 interface NavbarProps {
   profile?: UserProfile | null;
+  horasSemana?: number;
   updateAvatarAction?: (formData: FormData) => Promise<void>;
   avisosPendientes?: AvisoConRelaciones[];
 }
 
-export function Navbar({ profile, updateAvatarAction, avisosPendientes = [] }: NavbarProps) {
+export function Navbar({ profile, horasSemana = 0, updateAvatarAction, avisosPendientes = [] }: NavbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useClientMounted();
   const isDark = mounted && resolvedTheme === 'dark';
+  const isAdmin = profile?.rol === 'administrador';
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
   const [signingOut, setSigningOut] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-  const mobileNavItems = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/dashboard/partes', label: 'Partes' },
-    { href: '/dashboard/clientes', label: 'Clientes' },
-    { href: '/dashboard/avisos', label: 'Avisos' },
-    { href: '/dashboard/horas-por-trabajador', label: 'Horas' }
-  ];
-  const mobileQuickActions = [
-    { href: '/dashboard/partes', label: 'Partes' },
-    { href: '/dashboard/clientes', label: 'Clientes' },
-    { href: '/dashboard/horas-por-trabajador', label: 'Tareas' }
-  ];
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const profileRef = useRef<HTMLDivElement | null>(null);
   const notifRef = useRef<HTMLDivElement | null>(null);
@@ -112,6 +99,10 @@ export function Navbar({ profile, updateAvatarAction, avisosPendientes = [] }: N
       document.removeEventListener('keydown', handleEscape);
     };
   }, []);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   const toggleTheme = () => {
     setTheme(isDark ? 'light' : 'dark');
@@ -204,19 +195,6 @@ export function Navbar({ profile, updateAvatarAction, avisosPendientes = [] }: N
             ) : null}
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setProfileOpen(false);
-              setMobileMenuOpen((current) => !current);
-            }}
-            aria-label="Abrir menú de navegación"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 md:hidden dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            <MoreHorizontal className="h-3.5 w-3.5" />
-            <span>Menú</span>
-          </button>
-
           <Link href="/" className="flex min-w-0 items-center gap-2.5">
             <img src="/branding/asturcat-logo.png" alt="Asturcat" className="h-9 w-9 shrink-0 rounded-lg" />
             <span className="min-w-0">
@@ -227,8 +205,17 @@ export function Navbar({ profile, updateAvatarAction, avisosPendientes = [] }: N
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900">
+          {visibleNavItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'rounded-full px-4 py-2 text-sm font-medium transition',
+                pathname === item.href
+                  ? 'bg-brand-600 text-white dark:bg-brand-500 dark:text-slate-950'
+                  : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900'
+              )}
+            >
               {item.label}
             </Link>
           ))}
@@ -297,43 +284,89 @@ export function Navbar({ profile, updateAvatarAction, avisosPendientes = [] }: N
           <Button variant="outline" onClick={handleSignOut} disabled={signingOut} className="hidden sm:inline-flex">
             <LogOut className="mr-2 h-4 w-4" /> {signingOut ? 'Saliendo...' : 'Cerrar sesión'}
           </Button>
-        </div>
-      </div>
-
-      <div className="border-t border-slate-200 bg-white/95 px-3 py-3 md:hidden dark:border-slate-800 dark:bg-slate-950/95">
-        <div className="grid grid-cols-3 gap-2">
-          {mobileQuickActions.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2.5 text-center text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              {item.label}
-            </Link>
-          ))}
+          <button
+            type="button"
+            onClick={() => {
+              setProfileOpen(false);
+              setMobileMenuOpen((current) => !current);
+            }}
+            aria-haspopup="true"
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? 'Cerrar menú de navegación' : 'Abrir menú de navegación'}
+            className="grid h-11 w-11 place-items-center rounded-full border border-slate-300 text-slate-700 transition hover:bg-slate-100 md:hidden dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+          >
+            {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
         </div>
       </div>
 
       {mobileMenuOpen ? (
-        <div className="border-t border-slate-200 bg-white/95 px-4 py-3 md:hidden dark:border-slate-800 dark:bg-slate-950/95">
-          <div className="space-y-2">
-            {mobileNavItems.map((item) => (
+        <div className="space-y-4 border-t border-slate-200 bg-white/95 px-4 py-4 md:hidden dark:border-slate-800 dark:bg-slate-950/95">
+          <nav className="space-y-1.5">
+            {visibleNavItems.map((item) => {
+              const Icon = item.icon;
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition',
+                    active
+                      ? 'bg-brand-600 text-white dark:bg-brand-500 dark:text-slate-950'
+                      : 'border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800'
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              href="/dashboard/partes/nuevo"
+              className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+            >
+              <Plus className="h-4 w-4" /> Nuevo parte
+            </Link>
+            {isAdmin ? (
               <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                href="/dashboard/clientes"
+                className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
               >
-                {item.label}
+                <Plus className="h-4 w-4" /> Nuevo cliente
               </Link>
-            ))}
+            ) : null}
+          </div>
+
+          <div className="flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-2.5 text-sm dark:bg-slate-900">
+            <span className="font-medium text-slate-700 dark:text-slate-300">Horas esta semana</span>
+            <span className="font-semibold text-brand-600 dark:text-brand-300">{horasSemana}h</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={async () => {
-                setMobileMenuOpen(false);
-                await handleSignOut();
-              }}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-700 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:hover:bg-rose-900/60"
+              onClick={toggleTheme}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+            >
+              {mounted && isDark ? (
+                <>
+                  <SunMedium className="h-4 w-4" /> Claro
+                </>
+              ) : (
+                <>
+                  <Moon className="h-4 w-4" /> Oscuro
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-700 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:hover:bg-rose-900/60"
             >
               <LogOut className="h-4 w-4" />
               {signingOut ? 'Saliendo...' : 'Cerrar sesión'}

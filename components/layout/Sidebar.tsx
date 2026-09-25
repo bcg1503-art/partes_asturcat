@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { BarChart3, Bell, FileText, LayoutDashboard, Plus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const navItems = [
+export const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
   { href: '/dashboard/partes', label: 'Partes', icon: FileText, adminOnly: false },
   { href: '/dashboard/clientes', label: 'Clientes', icon: Users, adminOnly: false },
@@ -22,7 +22,7 @@ export function Sidebar({ horasSemana = 0, isAdmin = false }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="w-full rounded-[1.75rem] border border-slate-200 bg-white/95 p-4 shadow-soft dark:border-slate-800 dark:bg-slate-950/90 lg:min-h-[calc(100vh-4rem)] lg:max-w-[18rem] lg:flex-none lg:p-6">
+    <aside className="hidden w-full rounded-[1.75rem] border border-slate-200 bg-white/95 p-4 shadow-soft dark:border-slate-800 dark:bg-slate-950/90 lg:block lg:min-h-[calc(100vh-4rem)] lg:max-w-[18rem] lg:flex-none lg:p-6">
       <div className="mb-4 lg:mb-8">
         <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Menú</p>
       </div>
