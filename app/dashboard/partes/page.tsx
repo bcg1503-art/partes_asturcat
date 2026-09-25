@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { ParteTable } from '@/components/partes/parte-table';
 import { supabaseServer } from '@/lib/supabase-server';
 import { getCurrentUserProfile } from '@/actions/auth';
-import { cerrarMes } from '@/actions/partes';
+import { cerrarMes, markParteRevisado, validarTodosLosPartes } from '@/actions/partes';
 
 const PAGE_SIZE = 20;
 const MESES = [
@@ -32,6 +32,47 @@ async function cerrarMesAction(formData: FormData) {
   const mes = Number(formData.get('mes'));
   const ano = Number(formData.get('ano'));
   await cerrarMes(mes, ano);
+  revalidatePath('/dashboard/partes');
+}
+
+async function validarTodosAction() {
+  'use server';
+
+  const supabase = await supabaseServer();
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData?.session?.user) {
+    throw new Error('Sesión inválida.');
+  }
+
+  const { data: profile } = await supabase.from('users').select('rol').eq('id', sessionData.session.user.id).single();
+  if (profile?.rol !== 'administrador') {
+    throw new Error('No tienes permisos para validar partes.');
+  }
+
+  await validarTodosLosPartes();
+  revalidatePath('/dashboard/partes');
+}
+
+async function validarParteAction(formData: FormData) {
+  'use server';
+
+  const supabase = await supabaseServer();
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData?.session?.user) {
+    throw new Error('Sesión inválida.');
+  }
+
+  const { data: profile } = await supabase.from('users').select('rol').eq('id', sessionData.session.user.id).single();
+  if (profile?.rol !== 'administrador') {
+    throw new Error('No tienes permisos para validar partes.');
+  }
+
+  const parteId = formData.get('parteId')?.toString();
+  if (!parteId) {
+    throw new Error('Falta el parte a validar.');
+  }
+
+  await markParteRevisado(parteId);
   revalidatePath('/dashboard/partes');
 }
 
@@ -81,6 +122,8 @@ export default async function PartesPage({ searchParams }: PartesPageProps) {
     meses = Array.from(grouped.values()).sort((a, b) => b.ano * 100 + b.mes - (a.ano * 100 + a.mes));
   }
 
+  const totalPendientes = meses.reduce((sum, mesInfo) => sum + mesInfo.pendientes, 0);
+
   return (
     <section className="rounded-[1.75rem] border border-slate-200 bg-white/95 p-6 shadow-soft dark:border-slate-800 dark:bg-slate-900/90">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -90,9 +133,21 @@ export default async function PartesPage({ searchParams }: PartesPageProps) {
             {profile.rol === 'trabajador' ? 'Mis partes' : 'Todos los partes'}
           </h1>
         </div>
-        <Link href="/dashboard/partes/nuevo" className="inline-flex items-center rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-700">
-          Nuevo registro
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          {profile.rol === 'administrador' && totalPendientes > 0 ? (
+            <form action={validarTodosAction}>
+              <button
+                type="submit"
+                className="inline-flex items-center rounded-full border border-brand-600 px-5 py-2 text-sm font-semibold text-brand-600 transition hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/30"
+              >
+                Validar todos los partes
+              </button>
+            </form>
+          ) : null}
+          <Link href="/dashboard/partes/nuevo" className="inline-flex items-center rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-700">
+            Nuevo registro
+          </Link>
+        </div>
       </div>
 
       {profile.rol === 'administrador' && meses.length > 0 ? (
@@ -137,6 +192,7 @@ export default async function PartesPage({ searchParams }: PartesPageProps) {
         partes={partes ?? []}
         isAdmin={profile.rol === 'administrador'}
         groupByMonth={profile.rol === 'trabajador'}
+        onValidar={profile.rol === 'administrador' ? validarParteAction : undefined}
       />
       {totalPages > 1 ? (
         <div className="mt-6 flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">

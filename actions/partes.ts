@@ -182,3 +182,20 @@ export async function cerrarMes(mes: number, ano: number) {
   if (error) throw error;
   return data?.length ?? 0;
 }
+
+/**
+ * Bulk-closes every pendiente parte, regardless of mes/ano (admin only,
+ * enforced both by the caller and by the "administrador manage all partes"
+ * RLS policy). Returns how many partes were closed.
+ */
+export async function validarTodosLosPartes() {
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase
+    .from('partes')
+    .update({ estado: 'revisado' })
+    .eq('estado', 'pendiente')
+    .select('id');
+
+  if (error) throw error;
+  return data?.length ?? 0;
+}

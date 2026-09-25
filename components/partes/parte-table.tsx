@@ -24,6 +24,8 @@ interface ParteTableProps {
   isAdmin: boolean;
   /** Group rows under a "Mes Año" heading instead of a flat table (trabajador view). */
   groupByMonth?: boolean;
+  /** Admin-only: validates a single pendiente parte in place, without leaving the list. */
+  onValidar?: (formData: FormData) => Promise<void>;
 }
 
 function horasTotales(parte: ParteConRelaciones) {
@@ -34,7 +36,7 @@ function periodoLabel(parte: ParteConRelaciones) {
   return `${MESES[parte.mes - 1] ?? parte.mes} ${parte.ano}`;
 }
 
-export function ParteTable({ partes, isAdmin, groupByMonth = false }: ParteTableProps) {
+export function ParteTable({ partes, isAdmin, groupByMonth = false, onValidar }: ParteTableProps) {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sortAsc, setSortAsc] = useState(false);
@@ -175,12 +177,25 @@ export function ParteTable({ partes, isAdmin, groupByMonth = false }: ParteTable
                     <Badge variant={statusVariant(parte.estado)}>{parte.estado}</Badge>
                   </td>
                   <td className="px-4 py-4">
-                    <Link
-                      className="text-brand-600 underline decoration-brand-200 transition hover:text-brand-700 dark:text-brand-300"
-                      href={`/dashboard/partes/${parte.id}`}
-                    >
-                      Ver
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        className="text-brand-600 underline decoration-brand-200 transition hover:text-brand-700 dark:text-brand-300"
+                        href={`/dashboard/partes/${parte.id}`}
+                      >
+                        Ver
+                      </Link>
+                      {isAdmin && onValidar && parte.estado === 'pendiente' ? (
+                        <form action={onValidar}>
+                          <input type="hidden" name="parteId" value={parte.id} />
+                          <button
+                            type="submit"
+                            className="text-emerald-600 underline decoration-emerald-200 transition hover:text-emerald-700 dark:text-emerald-400"
+                          >
+                            Validar
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}
