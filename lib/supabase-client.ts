@@ -12,7 +12,13 @@ if (supabaseUrl && supabaseAnonKey) {
       autoRefreshToken: true,
       // sessionStorage instead of localStorage: cleared when the tab/browser closes,
       // so the user has to sign in again instead of staying logged in indefinitely.
-      storage: typeof window !== 'undefined' ? window.sessionStorage : undefined
+      storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+      // We never rely on Supabase's automatic implicit-grant URL parsing — signin/signup
+      // call signInWithPassword/signUp explicitly, and /reset-password verifies its token
+      // itself. Leaving this on made the SDK race its own background parsing of a
+      // confirmation-link hash against a manual sign-in submitted on the same page load,
+      // so the first "Entrar" click after following an email link would silently no-op.
+      detectSessionInUrl: false
     }
   });
 } else {
