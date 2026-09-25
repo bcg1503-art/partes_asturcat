@@ -81,7 +81,7 @@ export function ParteTable({ partes, isAdmin, groupByMonth = false, onValidar }:
   };
 
   return (
-    <div className="space-y-4 rounded-[1.75rem] border border-slate-200 bg-white/95 p-6 shadow-soft dark:border-slate-800 dark:bg-slate-900/90">
+    <div className="space-y-4 rounded-[1.25rem] border border-slate-200 bg-white/95 p-4 shadow-soft dark:border-slate-800 dark:bg-slate-900/90 sm:rounded-[1.75rem] sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <input

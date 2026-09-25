@@ -72,7 +72,7 @@ export function ParteForm({ clientes, numeroPartee, clienteFijo, defaultValues, 
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 rounded-[1.75rem] border border-slate-200 bg-white/95 p-6 shadow-soft dark:border-slate-800 dark:bg-slate-900/90">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 rounded-[1.25rem] border border-slate-200 bg-white/95 p-4 shadow-soft dark:border-slate-800 dark:bg-slate-900/90 sm:space-y-6 sm:rounded-[1.75rem] sm:p-6">
       {numeroPartee ? (
         <div className="rounded-[1.5rem] border border-brand-200 bg-brand-50 p-4 dark:border-brand-900 dark:bg-brand-950/30">
           <p className="text-sm text-brand-600 dark:text-brand-300">Número de parte</p>

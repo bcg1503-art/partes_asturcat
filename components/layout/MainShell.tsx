@@ -16,7 +16,7 @@ export function MainShell({ children, profile, horasSemana = 0, updateAvatarActi
       <Navbar profile={profile ?? null} horasSemana={horasSemana} updateAvatarAction={updateAvatarAction} avisosPendientes={avisosPendientes} />
       <div className="mx-auto grid max-w-7xl gap-4 px-3 py-4 sm:gap-6 sm:px-6 lg:grid-cols-[18rem_1fr] lg:px-6 lg:py-8">
         <Sidebar horasSemana={horasSemana} isAdmin={profile?.rol === 'administrador'} />
-        <main className="space-y-6 min-w-0">{children}</main>
+        <main className="min-w-0 space-y-4 sm:space-y-6">{children}</main>
       </div>
     </div>
   );

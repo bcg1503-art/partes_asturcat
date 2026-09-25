@@ -9,7 +9,7 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
   }, [error]);
 
   return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 rounded-[1.75rem] border border-slate-200 bg-white/95 p-10 text-center shadow-soft dark:border-slate-800 dark:bg-slate-900/90">
+    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 rounded-[1.25rem] border border-slate-200 bg-white/95 p-6 text-center shadow-soft dark:border-slate-800 dark:bg-slate-900/90 sm:rounded-[1.75rem] sm:p-10">
       <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Ha ocurrido un error</p>
       <p className="max-w-md text-sm text-slate-500 dark:text-slate-400">
         {error.message || 'No se ha podido cargar esta página. Inténtalo de nuevo.'}

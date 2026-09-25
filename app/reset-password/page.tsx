@@ -104,8 +104,8 @@ export default function ResetPasswordPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 lg:px-8">
-        <div className="space-y-6 rounded-[1.75rem] border border-slate-200 bg-white/95 p-10 shadow-soft dark:border-slate-800 dark:bg-slate-900/90">
+      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-8 sm:px-6 sm:py-16 lg:px-8">
+        <div className="space-y-6 rounded-[1.25rem] border border-slate-200 bg-white/95 p-6 shadow-soft dark:border-slate-800 dark:bg-slate-900/90 sm:rounded-[1.75rem] sm:p-10">
           <div className="space-y-2">
             <img src="/branding/asturcat-logo.png" alt="Asturcat" className="mb-2 h-10 w-10 rounded-lg" />
             <p className="text-sm uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Asturcat Construcciones</p>
