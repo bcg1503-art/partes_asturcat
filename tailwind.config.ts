@@ -6,20 +6,20 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
+        sans: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif']
       },
       colors: {
         brand: {
-          50: '#ecfeff',
-          100: '#cffafe',
-          200: '#a5f3fc',
-          300: '#67e8f9',
-          400: '#22d3ee',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-          800: '#115e59',
-          900: '#134e4a'
+          50: '#fcf6f1',
+          100: '#f8ebe1',
+          200: '#f0d3bf',
+          300: '#e6b796',
+          400: '#d88f5a',
+          500: '#cf7635',
+          600: '#c9631a',
+          700: '#ab5416',
+          800: '#8d4512',
+          900: '#6f360e'
         },
         accent: {
           50: '#eff6ff',

@@ -217,9 +217,12 @@ export function Navbar({ profile, updateAvatarAction, avisosPendientes = [] }: N
             <span>Menú</span>
           </button>
 
-          <Link href="/" className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">Partes de Trabajo</p>
-            <p className="truncate text-xs text-slate-500 dark:text-slate-400">Gestión de obra profesional</p>
+          <Link href="/" className="flex min-w-0 items-center gap-2.5">
+            <img src="/branding/asturcat-logo.png" alt="Asturcat" className="h-9 w-9 shrink-0 rounded-lg" />
+            <span className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">Asturcat Construcciones</p>
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400">Partes de trabajo</p>
+            </span>
           </Link>
         </div>
 

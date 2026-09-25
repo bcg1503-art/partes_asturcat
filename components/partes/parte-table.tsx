@@ -121,7 +121,7 @@ export function ParteTable({ partes, isAdmin, groupByMonth = false, onValidar }:
                     href={`/dashboard/partes/${parte.id}`}
                     className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-brand-300 hover:bg-brand-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-brand-800 dark:hover:bg-brand-950/30"
                   >
-                    <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-sm font-semibold text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+                    <span className="inline-flex rounded-full bg-brand-100 px-2 py-1 text-sm font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
                       {formatNumeroPartee(parte.numero_parte)}
                     </span>
                     <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Cliente</p>
@@ -155,7 +155,7 @@ export function ParteTable({ partes, isAdmin, groupByMonth = false, onValidar }:
                 <tr key={parte.id} className="border-t border-slate-200 dark:border-slate-800">
                   <td className="px-4 py-4">{periodoLabel(parte)}</td>
                   <td className="px-4 py-4">
-                    <span className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-sm font-semibold text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+                    <span className="inline-flex rounded-full bg-brand-100 px-2 py-1 text-sm font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">
                       {formatNumeroPartee(parte.numero_parte)}
                     </span>
                   </td>

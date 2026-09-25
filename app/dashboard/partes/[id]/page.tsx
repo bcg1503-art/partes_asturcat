@@ -77,7 +77,7 @@ export default async function ParteDetailPage({ params }: ParteDetailPageProps) 
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Detalle del parte</p>
-            <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-100">Parte <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-lg font-semibold text-blue-700 dark:bg-blue-900 dark:text-blue-200">{formatNumeroPartee(parte.numero_parte)}</span></h1>
+            <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-100">Parte <span className="inline-flex rounded-full bg-brand-100 px-3 py-1 text-lg font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-200">{formatNumeroPartee(parte.numero_parte)}</span></h1>
           </div>
           <div className="flex flex-wrap gap-3">
             {profile.rol === 'administrador' && parte.estado === 'pendiente' ? (

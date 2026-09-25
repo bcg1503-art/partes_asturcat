@@ -53,9 +53,10 @@ export default function SignUpPage() {
       <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 lg:px-8">
         <div className="space-y-6 rounded-[1.75rem] border border-slate-200 bg-white/95 p-10 shadow-soft dark:border-slate-800 dark:bg-slate-900/90">
           <div className="space-y-2">
-            <p className="text-sm uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Registro nuevo</p>
-            <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-100">Crear cuenta para tu equipo</h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400">Regístrate como trabajador para empezar a gestionar partes de obra.</p>
+            <img src="/branding/asturcat-logo.png" alt="Asturcat" className="mb-2 h-10 w-10 rounded-lg" />
+            <p className="text-sm uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Asturcat Construcciones</p>
+            <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-100">Crear cuenta</h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Regístrate como trabajador para empezar a registrar tus partes.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
