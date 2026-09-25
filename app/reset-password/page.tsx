@@ -23,9 +23,32 @@ export default function ResetPasswordPage() {
     });
 
     async function init() {
-      // PKCE-style recovery links use a `?code=` query param instead of the
-      // implicit `#access_token=` hash fragment, and need an explicit exchange.
-      const code = new URL(window.location.href).searchParams.get('code');
+      const url = new URL(window.location.href);
+
+      // Preferred flow: the email links straight to this page with
+      // `?token_hash=...&type=recovery` (see the "Reset Password" email
+      // template). Verifying only happens here, client-side, when a real
+      // browser renders this page — so a mail provider's link-safety scanner
+      // fetching the URL server-side (which doesn't run our JS) can't consume
+      // the one-time token before the user actually clicks it. Linking
+      // directly to Supabase's `{{ .ConfirmationURL }}` doesn't have this
+      // protection: that URL verifies (and burns) the token on the plain GET
+      // request itself, which is exactly what those scanners trigger.
+      const tokenHash = url.searchParams.get('token_hash');
+      const type = url.searchParams.get('type');
+      if (tokenHash && type === 'recovery') {
+        const { error: verifyError } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' });
+        if (!verifyError) {
+          setReady(true);
+          return;
+        }
+        setError('El enlace no es válido o ha caducado. Solicita uno nuevo.');
+        return;
+      }
+
+      // PKCE-style recovery links use a `?code=` query param instead, and
+      // need an explicit exchange.
+      const code = url.searchParams.get('code');
       if (code) {
         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (!exchangeError) {
